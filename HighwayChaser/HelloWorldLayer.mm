@@ -83,7 +83,6 @@ enum {
 //		flags += b2DebugDraw::e_centerOfMassBit;
 		m_debugDraw->SetFlags(flags);		
 		
-		
 		// Define the ground body.
 		b2BodyDef groundBodyDef;
 		groundBodyDef.position.Set(0, 0); // bottom-left corner
@@ -167,39 +166,39 @@ enum {
     
     b2BodyDef leftWheelDef;
     leftWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    leftWheelDef.position += b2Vec2(-1.5f, -1.90f);
+    leftWheelDef.position += b2Vec2(-0.5f, -0.90f);
     leftWheelDef.type = b2_dynamicBody;
     leftWheelBody = world->CreateBody(&leftWheelDef);
     leftWheelBody->ResetMassData();
     
     b2BodyDef rightWheelDef;
     rightWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    rightWheelDef.position += b2Vec2(1.5f, -1.90f);
+    rightWheelDef.position += b2Vec2(0.5f, -0.90f);
     rightWheelDef.type = b2_dynamicBody;
     rightWheelBody = world->CreateBody(&rightWheelDef);
     rightWheelBody->ResetMassData();
     
     b2BodyDef leftRearWheelDef;
     leftRearWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    leftRearWheelDef.position += b2Vec2(-1.5f,1.90f);
+    leftRearWheelDef.position += b2Vec2(-0.5f,0.90f);
     leftRearWheelDef.type = b2_dynamicBody;
     leftRearWheelBody = world->CreateBody(&leftRearWheelDef);
     leftRearWheelBody->ResetMassData();
 	
     b2BodyDef rightRearWheelDef;
     rightRearWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    rightRearWheelDef.position += b2Vec2(1.5f, 1.9f);
+    rightRearWheelDef.position += b2Vec2(0.5f, 0.9f);
     rightRearWheelDef.type = b2_dynamicBody;
     rightRearWheelBody = world->CreateBody(&rightRearWheelDef);
     rightRearWheelBody->ResetMassData();
     
 	// Define another box shape for our dynamic body.
 	b2PolygonShape bodyBox;
-	bodyBox.SetAsBox(1.5f, 2.5f);
+	bodyBox.SetAsBox(0.5f, 1.25f);
     //These are mid points for our 1m box
     
     b2PolygonShape wheelBox;
-    wheelBox.SetAsBox(0.2, 0.5);
+    wheelBox.SetAsBox(0.1, 0.25);
     
 	// Define the dynamic body fixture.
 	b2FixtureDef bodyFixtureDef;
@@ -250,7 +249,6 @@ enum {
     //[self killOrthogonalVelocity:leftWheelBody];
     //[self killOrthogonalVelocity:leftWheelBody];
     
-    
     b2Vec2 lDirection = leftWheelBody->GetTransform().R.col2;
     lDirection*=40.0f;
     
@@ -259,29 +257,6 @@ enum {
     
     leftWheelBody->ApplyForce(lDirection, leftWheelBody->GetPosition());
     rightWheelBody->ApplyForce(rDirection, rightWheelBody->GetPosition());
-    
-    /*
-     myWorld.Step(1/30, 8);
-     killOrthogonalVelocity(leftWheel);
-     killOrthogonalVelocity(rightWheel);
-     killOrthogonalVelocity(leftRearWheel);
-     killOrthogonalVelocity(rightRearWheel);
-     
-     //Driving
-     var ldirection = leftWheel.GetXForm().R.col2.Copy();
-     ldirection.Multiply(engineSpeed);
-     var rdirection = rightWheel.GetXForm().R.col2.Copy()
-     rdirection.Multiply(engineSpeed);
-     leftWheel.ApplyForce(ldirection, leftWheel.GetPosition());
-     rightWheel.ApplyForce(rdirection, rightWheel.GetPosition());
-     
-     //Steering
-     var mspeed:Number;
-     mspeed = steeringAngle - leftJoint.GetJointAngle();
-     leftJoint.SetMotorSpeed(mspeed * STEER_SPEED);
-     mspeed = steeringAngle - rightJoint.GetJointAngle();
-     rightJoint.SetMotorSpeed(mspeed * STEER_SPEED);
-     */
 }
 
 -(void) killOrthogonalVelocity:(b2Body*) body 
@@ -347,6 +322,9 @@ enum {
 	
 	prevX = accelX;
 	prevY = accelY;
+    
+    CCLOG(@"Accel X:%f",accelX);
+    CCLOG(@"Accel Y:%f",accelY);
 	
 	// accelerometer values are in "Portrait" mode. Change them to Landscape left
 	// multiply the gravity by 10
