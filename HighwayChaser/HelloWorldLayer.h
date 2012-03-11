@@ -25,6 +25,7 @@
     b2Body *rightWheelBody;
     b2Body *leftRearWheelBody;
     b2Body *rightRearWheelBody;
+    CCSprite *player;
 }
 
 // returns a CCScene that contains the HelloWorldLayer as the only child

@@ -99,20 +99,21 @@ enum {
 		groundBox.SetAsEdge(b2Vec2(0,0), b2Vec2(screenSize.width/PTM_RATIO,0));
 		groundBody->CreateFixture(&groundBox,0);
 		
-		// top
+		// left
+		groundBox.SetAsEdge(b2Vec2(0,0), b2Vec2(0,screenSize.height/PTM_RATIO));
+		groundBody->CreateFixture(&groundBox,0);
+        
+        // top
 		groundBox.SetAsEdge(b2Vec2(0,screenSize.height/PTM_RATIO), b2Vec2(screenSize.width/PTM_RATIO,screenSize.height/PTM_RATIO));
 		groundBody->CreateFixture(&groundBox,0);
 		
-		// left
-		groundBox.SetAsEdge(b2Vec2(0,screenSize.height/PTM_RATIO), b2Vec2(0,0));
-		groundBody->CreateFixture(&groundBox,0);
-		
 		// right
-		groundBox.SetAsEdge(b2Vec2(screenSize.width/PTM_RATIO,screenSize.height/PTM_RATIO), b2Vec2(screenSize.width/PTM_RATIO,0));
+		groundBox.SetAsEdge(b2Vec2(screenSize.width/PTM_RATIO,0), b2Vec2(screenSize.width/PTM_RATIO,screenSize.height/PTM_RATIO));
 		groundBody->CreateFixture(&groundBox,0);
         
-		//Set up sprite
-		
+        steeringAngle = 0;
+        
+		//Set up sprite batch node
 		CCSpriteBatchNode *batch = [CCSpriteBatchNode batchNodeWithFile:@"blocks.png" capacity:150];
 		[self addChild:batch z:0 tag:kTagBatchNode];
 		[self addNewSpriteWithCoords:ccp(screenSize.width/2, screenSize.height/2)];
@@ -148,10 +149,10 @@ enum {
 	//just randomly picking one of the images
 	int idx = (CCRANDOM_0_1() > .5 ? 0:1);
 	int idy = (CCRANDOM_0_1() > .5 ? 0:1);
-	CCSprite *sprite = [CCSprite spriteWithBatchNode:batch rect:CGRectMake(32 * idx,32 * idy,32,32)];
-	[batch addChild:sprite];
+	player = [CCSprite spriteWithBatchNode:batch rect:CGRectMake(32 * idx,32 * idy,32,32)];
+	[batch addChild:player];
 	
-	sprite.position = ccp( p.x, p.y);
+	player.position = ccp( p.x, p.y);
 	
 	// Define the dynamic body.
 	//Set up a 1m squared box in the physics world
@@ -160,7 +161,7 @@ enum {
     bodyDef.angularDamping = 1;
 	bodyDef.type = b2_dynamicBody;
 	bodyDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-	bodyDef.userData = sprite;
+	bodyDef.userData = player;
 	b2Body *body = world->CreateBody(&bodyDef);
     body->ResetMassData();
     
@@ -250,13 +251,22 @@ enum {
     //[self killOrthogonalVelocity:leftWheelBody];
     
     b2Vec2 lDirection = leftWheelBody->GetTransform().R.col2;
-    lDirection*=40.0f;
+    lDirection*=-4.0f;
     
     b2Vec2 rDirection = rightWheelBody->GetTransform().R.col2;
-    rDirection*=40.0f;
+    rDirection*=-4.0f;
     
     leftWheelBody->ApplyForce(lDirection, leftWheelBody->GetPosition());
     rightWheelBody->ApplyForce(rDirection, rightWheelBody->GetPosition());
+    
+    //Steering
+    float mSpeed;
+    
+    mSpeed = steeringAngle - leftWheelFrontJoint->GetJointAngle();
+    leftWheelFrontJoint->SetMotorSpeed(mSpeed * 1.5f);
+    
+    mSpeed = steeringAngle - rightWheelFrontJoint->GetJointAngle();
+    rightWheelFrontJoint->SetMotorSpeed(mSpeed * 1.5f);
 }
 
 -(void) killOrthogonalVelocity:(b2Body*) body 
@@ -296,6 +306,14 @@ enum {
 			myActor.rotation = -1 * CC_RADIANS_TO_DEGREES(b->GetAngle());
 		}	
 	}
+    CGSize winSize = [[CCDirector sharedDirector] winSize];
+    int x = MAX(player.position.x, winSize.width * 0.5);
+    int y = MAX(player.position.y, winSize.height * 0.5);
+    CGPoint actualPosition = ccp(x, y);
+    
+    CGPoint centerOfView = ccp(winSize.width/2, winSize.height/2);
+    CGPoint viewPoint = ccpSub(centerOfView,actualPosition);
+    self.position = viewPoint;
     
     [self updateSpriteWithDeltaTime:dt];
 }
@@ -319,18 +337,17 @@ enum {
 	
 	float accelX = (float) acceleration.x * kFilterFactor + (1- kFilterFactor)*prevX;
 	float accelY = (float) acceleration.y * kFilterFactor + (1- kFilterFactor)*prevY;
-	
+	steeringAngle = accelX * 2;
 	prevX = accelX;
 	prevY = accelY;
     
-    CCLOG(@"Accel X:%f",accelX);
-    CCLOG(@"Accel Y:%f",accelY);
+    //CCLOG(@"Accel Y:%f",accelY);
 	
 	// accelerometer values are in "Portrait" mode. Change them to Landscape left
 	// multiply the gravity by 10
-	b2Vec2 gravity( -accelY * 10, accelX * 10);
+	//b2Vec2 gravity( -accelY * 50, accelX * 50);
 	
-	world->SetGravity( gravity );
+	//world->SetGravity( gravity );
 }
 
 // on "dealloc" you need to release all your retained objects
