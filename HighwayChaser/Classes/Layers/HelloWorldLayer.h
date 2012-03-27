@@ -21,6 +21,12 @@
     float steeringAngle;
     b2RevoluteJoint *leftWheelFrontJoint;
     b2RevoluteJoint *rightWheelFrontJoint;
+    
+    b2Body *wallBody;
+    b2Fixture *leftEdge;
+    b2Fixture *rightEdge;
+    
+    b2Body *carBody;
     b2Body *leftWheelBody;
     b2Body *rightWheelBody;
     b2Body *leftRearWheelBody;
@@ -32,6 +38,6 @@
 +(CCScene *) scene;
 // adds a new sprite at a given coordinate
 -(void) addNewSpriteWithCoords:(CGPoint)p;
--(void) killOrthogonalVelocity:(b2Body*) body;
+-(void) killOrthogonalVelocityWithB2Body:(b2Body*) body;
 
 @end
