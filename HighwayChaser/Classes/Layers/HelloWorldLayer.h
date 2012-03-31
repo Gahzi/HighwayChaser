@@ -23,8 +23,11 @@
     b2RevoluteJoint *rightWheelFrontJoint;
     
     b2Body *wallBody;
-    b2Fixture *leftEdge;
-    b2Fixture *rightEdge;
+    b2Fixture *leftWallFixture;
+    b2Fixture *rightWallFixture;
+    
+    b2Fixture *leftWallPrevFixture;
+    b2Fixture *rightWallPrevFixture;
     
     b2Body *carBody;
     b2Body *leftWheelBody;

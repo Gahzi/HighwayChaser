@@ -77,7 +77,7 @@ enum {
 //		flags += b2DebugDraw::e_aabbBit;
 //		flags += b2DebugDraw::e_pairBit;
 //		flags += b2DebugDraw::e_centerOfMassBit;
-		m_debugDraw->SetFlags(flags);		
+		m_debugDraw->SetFlags(flags);
 		
 		// Define the ground body.
 		b2BodyDef groundBodyDef;
@@ -88,18 +88,26 @@ enum {
 		// The body is also added to the world.
 		wallBody = world->CreateBody(&groundBodyDef);
         
-        /*
-        b2PolygonShape edgeShape;
-		b
-		// left
-		edgeShape.SetAsEdge(b2Vec2(0,0), b2Vec2(0,screenSize.height/PTM_RATIO * 3));
-		leftEdge = wallBody->CreateFixture(&edgeShape,0);
-        		
-		// right
-		edgeShape.SetAsEdge(b2Vec2(screenSize.width/PTM_RATIO,0), b2Vec2(screenSize.width/PTM_RATIO,(screenSize.height/PTM_RATIO) * 3));
-		rightEdge =  wallBody->CreateFixture(&edgeShape,0);
-        */
-         
+        b2ChainShape leftChainShape;
+        b2ChainShape rightChainShape;
+        
+        b2Vec2 vs[2];
+        
+        vs[0].Set(50/PTM_RATIO, 0);
+        vs[1].Set(50/PTM_RATIO,screenSize.height/PTM_RATIO * 3);
+        
+        leftChainShape.CreateChain(vs, 2);
+        leftWallFixture = wallBody->CreateFixture(&leftChainShape, 0);
+        
+        vs[0].Set((screenSize.width-1)/PTM_RATIO, 0);
+        vs[1].Set((screenSize.width-1)/PTM_RATIO,screenSize.height/PTM_RATIO * 3);
+        
+        rightChainShape.CreateChain(vs, 2);
+		rightWallFixture =  wallBody->CreateFixture(&rightChainShape,0);
+        
+        leftWallPrevFixture = NULL;
+        rightWallPrevFixture = NULL;
+        
         steeringAngle = 0;
         
 		//Set up sprite batch node
@@ -154,28 +162,28 @@ enum {
     
     b2BodyDef leftWheelDef;
     leftWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    leftWheelDef.position += b2Vec2(-0.5f, -0.90f);
+    leftWheelDef.position += b2Vec2(-0.5f, 0.90f);
     leftWheelDef.type = b2_dynamicBody;
     leftWheelBody = world->CreateBody(&leftWheelDef);
     leftWheelBody->ResetMassData();
     
     b2BodyDef rightWheelDef;
     rightWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    rightWheelDef.position += b2Vec2(0.5f, -0.90f);
+    rightWheelDef.position += b2Vec2(0.5f, 0.90f);
     rightWheelDef.type = b2_dynamicBody;
     rightWheelBody = world->CreateBody(&rightWheelDef);
     rightWheelBody->ResetMassData();
     
     b2BodyDef leftRearWheelDef;
     leftRearWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    leftRearWheelDef.position += b2Vec2(-0.5f,0.90f);
+    leftRearWheelDef.position += b2Vec2(-0.5f,-0.90f);
     leftRearWheelDef.type = b2_dynamicBody;
     leftRearWheelBody = world->CreateBody(&leftRearWheelDef);
     leftRearWheelBody->ResetMassData();
 	
     b2BodyDef rightRearWheelDef;
     rightRearWheelDef.position.Set(p.x/PTM_RATIO, p.y/PTM_RATIO);
-    rightRearWheelDef.position += b2Vec2(0.5f, 0.9f);
+    rightRearWheelDef.position += b2Vec2(0.5f, -0.9f);
     rightRearWheelDef.type = b2_dynamicBody;
     rightRearWheelBody = world->CreateBody(&rightRearWheelDef);
     rightRearWheelBody->ResetMassData();
@@ -246,10 +254,10 @@ enum {
     [self killOrthogonalVelocityWithB2Body:rightRearWheelBody];
     
     b2Vec2 lDirection = leftWheelBody->GetTransform().q.GetYAxis();
-    lDirection*=-4.0f;
+    lDirection*=4.0f;
     
     b2Vec2 rDirection = rightWheelBody->GetTransform().q.GetYAxis();
-    rDirection*=-4.0f;
+    rDirection*=4.0f;
     
     leftWheelBody->ApplyForce(lDirection, leftWheelBody->GetPosition());
     rightWheelBody->ApplyForce(rDirection, rightWheelBody->GetPosition());
@@ -310,40 +318,51 @@ enum {
     CGPoint viewPoint = ccpSub(centerOfView,actualPosition);
     self.position = viewPoint;
     
-    CCLOG(@"%@",NSStringFromCGPoint(viewPoint));
-    
-    /*
-    b2PolygonShape *testShape;
+    CGPoint playerPosition = CGPointMake(player.position.x / PTM_RATIO, player.position.y / PTM_RATIO);
 
+    BOOL shouldAddFixture = NO;
     for(b2Fixture *fixture = wallBody->GetFixtureList();fixture;fixture = fixture->GetNext()) {
         b2Shape *fixtureShape = fixture->GetShape();
         
-        if (fixtureShape->GetType() == 1) {
-            b2PolygonShape *polygonShape = (b2PolygonShape*)fixtureShape;
-            b2Vec2 *shapeVertices = polygonShape->m_vertices;
-            int32 verticesCount = polygonShape->m_vertexCount;
+        if (fixtureShape->GetType() == 3) {
+            b2ChainShape *chainShape = (b2ChainShape*)fixtureShape;
+            b2Vec2 *shapeVertices = chainShape->m_vertices;
+            int32 verticesCount = chainShape->m_count;
             
-            if (verticesCount > 0 && verticesCount < 8) {
-                CGFloat shapeVerticesY = shapeVertices[verticesCount].y;
-                if (shapeVerticesY < -viewPoint.y) {
-                    CCLOG(@"Destroying Fixture!");
-                    wallBody->DestroyFixture(fixture);
+            if (verticesCount > 0) {
+                CGFloat shapeVerticesY = shapeVertices[verticesCount-1].y;
+                if (shapeVerticesY - ((winSize.height * 0.5) / PTM_RATIO) < playerPosition.y) {
+                    shouldAddFixture = YES;
                 }
             }
         }
-    } 
+    }
     
+    if(shouldAddFixture) {
+        wallBody->DestroyFixture(leftWallFixture);
+        wallBody->DestroyFixture(rightWallFixture);
+        
+        CGSize screenSize = [CCDirector sharedDirector].winSize;
+        b2ChainShape leftChainShape;
+        b2ChainShape rightChainShape;
+        
+        b2Vec2 vs[2];
+        
+        vs[0].Set(50/PTM_RATIO, 0 + -viewPoint.y / PTM_RATIO);
+        vs[1].Set(50/PTM_RATIO, -viewPoint.y / PTM_RATIO + screenSize.height/PTM_RATIO * 3);
+        
+        leftChainShape.CreateChain(vs, 2);
+        leftWallPrevFixture = leftWallFixture;
+        leftWallFixture = wallBody->CreateFixture(&leftChainShape, 0);
+        
+        vs[0].Set((screenSize.width-1)/PTM_RATIO, 0 + -viewPoint.y / PTM_RATIO);
+        vs[1].Set((screenSize.width-1)/PTM_RATIO, -viewPoint.y / PTM_RATIO + screenSize.height/PTM_RATIO * 3);
+        
+        rightChainShape.CreateChain(vs, 2);
+        rightWallPrevFixture = rightWallFixture;
+        rightWallFixture =  wallBody->CreateFixture(&rightChainShape,0);
+    }
     
-    // left
-    b2PolygonShape newEdgeShape;
-    newEdgeShape.SetAsEdge(b2Vec2(0,-viewPoint.y/PTM_RATIO), b2Vec2(0,(winSize.height + (-viewPoint.y))/PTM_RATIO));
-    leftEdge = wallBody->CreateFixture(&newEdgeShape,wallBody->GetAngle());
-    
-    // right
-    newEdgeShape.SetAsEdge(b2Vec2(winSize.width/PTM_RATIO,-viewPoint.y), b2Vec2(winSize.width/PTM_RATIO,(winSize.height + (-viewPoint.y))/PTM_RATIO));
-    rightEdge =  wallBody->CreateFixture(&newEdgeShape,wallBody->GetAngle());
-    */
-     
     [self updateSpriteWithDeltaTime:dt];
 }
 
@@ -366,7 +385,7 @@ enum {
 	
 	float accelX = (float) acceleration.x * kFilterFactor + (1- kFilterFactor)*prevX;
 	float accelY = (float) acceleration.y * kFilterFactor + (1- kFilterFactor)*prevY;
-	steeringAngle = -accelX * 2;
+	steeringAngle = -accelX;
 	prevX = accelX;
 	prevY = accelY;
     
